@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from modelo.grafo_dependencias import GrafoDependencias
 from modelo.resultado_analise import ResultadoAnalise
 from servicos.analisador_dependencias import AnalisadorDependencias
 from servicos.carregador_csv import carregar_grafo_csv
@@ -12,7 +13,9 @@ class ControladorSistema:
         self._simulador = SimuladorExecucao()
 
     def analisarProjeto(self, caminho_csv: str | Path) -> ResultadoAnalise:
-        grafo = carregar_grafo_csv(caminho_csv)
+        return self.analisarGrafo(carregar_grafo_csv(caminho_csv))
+
+    def analisarGrafo(self, grafo: GrafoDependencias) -> ResultadoAnalise:
         graus_entrada = grafo.calcularGrausEntrada()
         ciclo = self._analisador.detectarCiclo(grafo)
 
