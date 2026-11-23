@@ -3,9 +3,11 @@ from pathlib import Path
 import streamlit as st
 
 from aplicacao.controlador_sistema import ControladorSistema
+from interface.visualizacao_grafo import gerar_dot
 from modelo.grafo_dependencias import GrafoDependencias
 from modelo.resultado_analise import ResultadoAnalise
 from modelo.tarefa import Tarefa
+from servicos.carregador_csv import carregar_grafo_csv
 
 
 BASE_PROJECT_PLAN = Path(__file__).resolve().parents[1] / "dados" / "T.csv"
@@ -20,7 +22,7 @@ def criar_exemplo_com_ciclo() -> GrafoDependencias:
     return grafo
 
 
-def exibir_resultado(resultado: ResultadoAnalise) -> None:
+def exibir_resultado(resultado: ResultadoAnalise, grafo: GrafoDependencias) -> None:
     st.subheader("Resultado da análise")
 
     tarefas, dependencias = st.columns(2)
@@ -45,6 +47,11 @@ def exibir_resultado(resultado: ResultadoAnalise) -> None:
         st.info("O projeto está vazio.")
 
     if resultado.graus_entrada:
+        st.subheader("Grafo de dependências")
+        st.graphviz_chart(gerar_dot(grafo, resultado.ciclo))
+        if resultado.ciclo is not None:
+            st.caption("As setas vermelhas fazem parte do ciclo encontrado.")
+
         st.subheader("Pré-requisitos diretos por tarefa")
         st.dataframe(
             [
@@ -139,7 +146,7 @@ def editar_grafo(controlador: ControladorSistema) -> None:
 
     resultado = st.session_state.resultado_manual
     if resultado is not None:
-        exibir_resultado(resultado)
+        exibir_resultado(resultado, grafo)
 
 
 def main() -> None:
@@ -158,14 +165,15 @@ def main() -> None:
 
     try:
         if cenario == "Project Plan (T.csv)":
-            resultado = controlador.analisarProjeto(BASE_PROJECT_PLAN)
+            grafo = carregar_grafo_csv(BASE_PROJECT_PLAN)
         else:
-            resultado = controlador.analisarGrafo(criar_exemplo_com_ciclo())
+            grafo = criar_exemplo_com_ciclo()
+        resultado = controlador.analisarGrafo(grafo)
     except (OSError, ValueError) as erro:
         st.error(f"Não foi possível analisar o projeto. {erro}")
         return
 
-    exibir_resultado(resultado)
+    exibir_resultado(resultado, grafo)
 
 
 if __name__ == "__main__":
